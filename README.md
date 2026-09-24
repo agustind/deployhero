@@ -1,8 +1,7 @@
 # DeployHero
 
-A tiny macOS menu bar app that shows the status of your deployments on **Vercel**, **Railway**,
-**Laravel Cloud** and **Fly.io** as one traffic light. Built with [tinyjs](https://tinyjs.app): a
-JavaScript backend and a native webview, shipping as a ~6 MB `.app`.
+A tiny native macOS menu bar app that shows the status of your deployments on **Vercel**, **Railway**,
+**Laravel Cloud** and **Fly.io** as one traffic light.
 
 | Light | Meaning |
 | ----- | ------- |
