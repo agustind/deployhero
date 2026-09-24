@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DeployHero</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+  <h1>DeployHero</h1>
+  <span class="light" id="light" title=""></span>
+</header>
+
+<div class="listHead"><h2>Platforms</h2></div>
+<p class="muted small" id="intro">Connect a platform with an access token. Tokens are stored in your macOS Keychain and only sent to that platform's API.</p>
+<div id="platforms"></div>
+
+<!-- at least one platform connected -->
+<section id="main" hidden>
+  <label class="check">
+    <input type="checkbox" id="prodOnly"> Production deployments only
+  </label>
+
+  <div class="listHead">
+    <h2>Latest per project</h2>
+    <button class="link" id="refresh">Refresh</button>
+  </div>
+  <div class="follows muted small">
+    Light follows <b id="follows"></b>. Tick projects to choose which ones it tracks.
+    <button class="link" id="followAll" hidden>Follow all</button>
+  </div>
+  <ul id="projects"></ul>
+  <div class="muted small" id="checked"></div>
+</section>
+
+<label class="check" id="loginItemRow" hidden>
+  <input type="checkbox" id="loginItem"> Start at login
+  <span class="muted small" id="loginItemNote"></span>
+</label>
+
+<footer class="muted small">
+  <span id="version"></span> · <button class="link" id="aboutBtn">About</button>
+</footer>
+
+<div class="overlay" id="about" hidden>
+  <div class="aboutBox">
+    <svg class="logo big" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+    <h2 class="aboutTitle">DeployHero</h2>
+    <div class="muted" id="aboutVersion"></div>
+    <p>A menu bar traffic light for your deployments on Vercel, Railway, Laravel Cloud and Fly.io.</p>
+    <p>Made by <a href="#" class="ext" data-url="https://dondo.dev">dondo.dev</a></p>
+    <button id="aboutClose">Close</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
