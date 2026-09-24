@@ -28,7 +28,7 @@ let light = 'gray';
 let lastChecked = null;
 let timer = null;
 let iconPaths = {};
-let seenStates = null;    // uid -> state, for "finished" notifications
+let seenStates = null;    // uid -> { state, key }, for "finished" notifications
 
 const connected = () => PROVIDERS.filter((p) => conns[p.id]?.token).map((p) => p.id);
 const errors = () => connected().filter((id) => conns[id].error).map((id) => [id, conns[id].error]);
@@ -100,14 +100,20 @@ async function refresh() {
   timer = setTimeout(refresh, light === 'yellow' ? POLL_BUSY : POLL_IDLE);
 }
 
-// A notification when a deployment we saw building lands (or fails).
+// A notification when a deployment lands (or fails): one we saw building, or a
+// new deployment of a known project that started and finished between polls.
 function notifyFinished(next) {
   const prev = seenStates;
-  seenStates = new Map(next.map((p) => [p.uid, p.state]));
+  const prevAt = lastChecked;
+  seenStates = new Map(next.map((p) => [p.uid, { state: p.state, key: p.key }]));
   if (!prev) return;   // first poll after launch/connect — don't spam history
+  const knownKeys = new Set([...prev.values()].map((s) => s.key));
   for (const p of next) {
-    const before = prev.get(p.uid);
-    if (before !== 'BUILDING' || p.state === 'BUILDING') continue;
+    if (p.state === 'BUILDING') continue;
+    const before = prev.get(p.uid)?.state;
+    const sawBuilding = before === 'BUILDING';
+    const newSincePoll = before === undefined && knownKeys.has(p.key) && p.created > prevAt;
+    if (!sawBuilding && !newSincePoll) continue;
     const where = PROVIDER[p.provider].name;
     if (p.state === 'ERROR') app.notify({ title: `❌ ${p.project} failed`, body: p.message ?? `${where} deployment errored` });
     if (p.state === 'READY') app.notify({ title: `✅ ${p.project} deployed`, body: p.message ?? `${p.target} is live on ${where}` });
