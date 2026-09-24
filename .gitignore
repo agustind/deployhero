@@ -1,0 +1,6 @@
+.build/
+dist/
+.DS_Store
+# vendored tinyjs agent docs from the project template
+.agents/
+.claude/
