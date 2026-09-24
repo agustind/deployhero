@@ -3,7 +3,7 @@
   "title": "DeployHero",
   "size": "440x640",
   "id": "io.github.agustind.deployhero",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minTinyjsVersion": "0.41.0",
   "icon": "icon.png",
   "activation": "accessory",

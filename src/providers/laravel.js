@@ -19,8 +19,12 @@ const STATES = {
 const cloud = (token, path) =>
   request(path.startsWith('http') ? path : API + path, { token, label: 'Laravel Cloud' });
 
-// When a deployment started; one that hasn't yet is the newest there is.
-const startedAt = (d) => Date.parse(d.attributes.started_at ?? '') || Infinity;
+// When a deployment was made. One with no timestamp at all is the newest
+// there is if it's still in progress, and the oldest if it already ended
+// (e.g. it failed before it ever started).
+const startedAt = ({ attributes: a }) =>
+  Date.parse(a.created_at ?? a.started_at ?? a.finished_at ?? '')
+  || (STATES[a.status] ? -Infinity : Infinity);
 
 async function latestDeployment(token, envId) {
   const page = await cloud(token, `/environments/${envId}/deployments`);
@@ -31,7 +35,10 @@ async function latestDeployment(token, envId) {
       && startedAt(list[0]) < startedAt(list[list.length - 1])) {
     list = (await cloud(token, page.links.last)).data ?? [];
   }
-  return list.reduce((best, d) => (!best || startedAt(d) > startedAt(best) ? d : best), null);
+  // Like the other platforms, a cancelled deployment doesn't count.
+  return list
+    .filter((d) => STATES[d.attributes.status] !== 'CANCELED')
+    .reduce((best, d) => (!best || startedAt(d) > startedAt(best) ? d : best), null);
 }
 
 export default {
@@ -40,7 +47,7 @@ export default {
   host: 'cloud.laravel.com',
   scopeLabel: null,
   tokenUrl: 'https://cloud.laravel.com',
-  tokenHelp: 'Create one under Organization settings → API tokens.',
+  tokenHelp: 'Navigate to your Laravel Cloud organization settings, click on the “API tokens” section in the sidebar, then click the “Create API Token” button.',
   dashboard: 'https://cloud.laravel.com',
 
   async account(token) {

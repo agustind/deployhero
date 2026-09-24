@@ -49,7 +49,7 @@ platform's API. **Disconnect** removes it from the Keychain.
 | -------- | ----- | ------- |
 | Vercel | A personal access token from <https://vercel.com/account/tokens>. Scoping it to the team you want to watch is enough. | `api.vercel.com` |
 | Railway | An **account** token from <https://railway.com/account/tokens>, created with no workspace selected. Workspace and project tokens can't list workspaces. | `backboard.railway.com` |
-| Laravel Cloud | An API token from your organization settings → **API tokens**. Read access to applications, environments and deployments is enough. | `cloud.laravel.com` |
+| Laravel Cloud | An API token: navigate to your Laravel Cloud organization settings, click on the **API tokens** section in the sidebar, then click the **Create API Token** button. Read access to applications, environments and deployments is enough. | `cloud.laravel.com` |
 | Fly.io | A personal access token (<https://fly.io/user/personal_access_tokens>) or an org token (`fly tokens create org`). | `api.fly.io` |
 
 ## What counts as a "project"
