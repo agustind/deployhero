@@ -22,8 +22,8 @@ A tiny native macOS menu bar app that shows the status of your deployments on **
 - **Scopes.** Pick a Vercel team, a Railway workspace or a Fly.io organization. A Laravel Cloud
   token already belongs to one organization.
 - **Production only.** Optionally ignore preview deployments and non-production environments.
-- **Notifications.** Get a macOS notification when a deployment the app saw building
-  finishes or fails.
+- **Notifications.** Get a macOS notification when a deployment finishes or fails, including
+  quick deploys that start and finish between two checks.
 - **Adaptive polling.** Checks every 10s while something is building and every 60s otherwise,
   and refreshes after the Mac wakes from sleep.
 - **Start at login.** Optionally launch the app when you log in.
