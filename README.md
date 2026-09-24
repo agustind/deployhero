@@ -29,6 +29,16 @@ JavaScript backend and a native webview, shipping as a ~6 MB `.app`.
   and refreshes after the Mac wakes from sleep.
 - **Start at login.** Optionally launch the app when you log in.
 
+## Install
+
+1. Download the latest `.dmg` from [Releases](https://github.com/agustind/deployhero/releases/latest).
+2. Open it and drag **DeployHero** into **Applications**.
+3. Launch it. A dot appears in the menu bar, and the settings window opens so you can connect a
+   platform.
+
+The app is signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper
+warnings. It requires an Apple Silicon Mac.
+
 ## Connecting platforms
 
 Open **Settings…** and click **Connect** next to a platform, then paste a token. Each token is
@@ -77,6 +87,8 @@ any failure gives red, otherwise anything building gives yellow, otherwise green
 ## Run in development
 
 ```sh
+git clone https://github.com/agustind/deployhero.git
+cd deployhero
 tinyjs dev
 ```
 
