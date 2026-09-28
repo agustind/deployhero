@@ -1,7 +1,8 @@
 # DeployHero
 
-A tiny native macOS menu bar app that shows the status of your deployments on **Vercel**, **Railway**,
-**Laravel Cloud** and **Fly.io** as one traffic light.
+A tiny native macOS menu bar app, written in Swift with AppKit and SwiftUI, that shows the status
+of your deployments on **Vercel**, **Railway**, **Laravel Cloud** and **Fly.io** as one traffic
+light.
 
 | Light | Meaning |
 | ----- | ------- |
@@ -36,7 +37,7 @@ A tiny native macOS menu bar app that shows the status of your deployments on **
    platform.
 
 The app is signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper
-warnings. It requires an Apple Silicon Mac.
+warnings. It requires macOS 14 or newer on an Apple Silicon Mac.
 
 ## Connecting platforms
 
@@ -76,35 +77,32 @@ any failure gives red, otherwise anything building gives yellow, otherwise green
 
 ## Requirements
 
-- macOS
-- [tinyjs](https://tinyjs.app) 0.41.0 or newer:
-
-  ```sh
-  curl -fsSL https://tinyjs.app/install | sh
-  ```
+- macOS 14 (Sonoma) or newer on Apple Silicon
+- To build: Xcode 16 or newer (or its command line tools), Swift 6
 
 ## Run in development
 
 ```sh
 git clone https://github.com/agustind/deployhero.git
 cd deployhero
-tinyjs dev
+swift run
 ```
 
-`tinyjs dev` launches the app with hot reload. Edit files in `src/` and it restarts itself.
-Set `TINYJS_DEBUG=1` to log the traffic between the backend and the native side.
+`swift run` starts the app straight from the build folder. Notifications and **Start at login**
+need a real app bundle, so they're off there. Use the build below to try those.
 
 ## Build the app
 
 ```sh
-tinyjs build
+scripts/build.sh
+open dist/DeployHero.app
 ```
 
 This produces `dist/DeployHero.app` (ad-hoc signed). Drag it into `/Applications` and open it.
 Tick **Start at login** in its window to launch it automatically when you log in.
 
-The first time the built app runs, macOS asks for Keychain access, because it's a different
-binary from the dev build.
+The first time a newly built binary reads your tokens, macOS asks for Keychain access. Click
+**Always Allow**.
 
 ### Signed and notarized release builds
 
@@ -112,29 +110,35 @@ With a Developer ID Application certificate in your keychain and a `notarytool` 
 (`xcrun notarytool store-credentials <profile> --apple-id … --team-id …`):
 
 ```sh
-export TINYJS_SIGN_IDENTITY="Developer ID Application: <Name> (<TEAMID>)"
-export TINYJS_NOTARY_PROFILE=<profile>
-tinyjs build --dmg       # sign with the Developer ID
-tinyjs notarize --dmg    # submit to Apple, staple the ticket, rebuild the dmg
+export SIGN_IDENTITY="Developer ID Application: <Name> (<TEAMID>)"
+export NOTARY_PROFILE=<profile>
+scripts/build.sh --notarize   # sign, notarize and staple the .app and dist/deployhero-<version>.dmg
 ```
 
-Passing these as environment variables keeps signing details out of `tinyjs.json`.
+`scripts/build.sh --dmg` builds the `.dmg` without notarizing. Passing these as environment
+variables keeps signing details out of the repo. The version comes from
+`Resources/Info.plist`.
 
 ## Project layout
 
 ```
-tinyjs.json            app config (name, bundle id, menu-bar-only "accessory" activation)
-src/main.js            backend: Keychain tokens, polling, tray icon + menu
-src/providers/         one module per platform, plus the shared fetch helper
-src/icons.js           the four tray dots as base64 PNGs
-src/frontend/          connect / settings window (HTML, CSS, JS)
-types/                 editor type definitions for the tinyjs APIs
+Package.swift                  Swift package (one executable target)
+Resources/Info.plist           bundle id, version, menu-bar-only (LSUIElement)
+scripts/build.sh               assembles, signs, notarizes and packages the .app
+Sources/DeployHero/
+  App.swift                    app delegate: windows, notifications, sleep/wake
+  Monitor.swift                state: Keychain tokens, polling, the light, notifications
+  StatusItem.swift             the menu bar dot and its menu
+  SettingsView.swift           connect / settings window (SwiftUI)
+  Settings.swift, Keychain.swift
+  Providers/                   one file per platform, plus the shared HTTP helper
 ```
 
 ## Adding a platform
 
-Create `src/providers/<name>.js` exporting the shape documented in
-`src/providers/index.js` (`account(token)` and `deployments(token, { scope, productionOnly })`,
-returning states normalised to `READY` / `ERROR` / `BUILDING`), then add it to the
-`PROVIDERS` list there. The tray, window, notifications and settings pick it up
-automatically. Give it a badge letter in `src/frontend/app.js` and a colour in `style.css`.
+Create `Sources/DeployHero/Providers/<Name>.swift` with a type conforming to `Provider`
+(documented in `Providers/Provider.swift`): `account(token:)` and
+`deployments(token:scope:productionOnly:)`, returning states normalised to `.ready` / `.error` /
+`.building` and dropping cancelled deployments. Then add a case to `ProviderID`. The menu,
+window, notifications and settings pick it up automatically. Give it a badge letter and colour
+in `Badge` in `SettingsView.swift`.
