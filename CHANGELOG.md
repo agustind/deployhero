@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-09-29
+
+### New
+- **Rewritten as a native Swift app** (AppKit + SwiftUI) instead of a tinyjs web view, at about a
+  fifth of the download size. Your tokens and settings carry over; macOS asks once for Keychain
+  access for the new binary.
+- **About** uses the standard macOS About panel.
+- **Clicking a notification** opens that deployment.
+- Needs macOS 14 or newer.
+
 ## 0.3.2 — 2026-09-24
 
 ### Fixed
