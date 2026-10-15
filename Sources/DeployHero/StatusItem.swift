@@ -80,7 +80,12 @@ final class StatusItem: NSObject, NSMenuDelegate {
             // One platform: a flat list. Several: grouped under headers.
             let now = Date()
             for id in ids {
-                let list = m.projects.filter { $0.provider == id }.prefix(ids.count > 1 ? 10 : 15)
+                // The newest few, plus anything building or failed further
+                // down, so the menu always shows what turned the light yellow or red.
+                let limit = ids.count > 1 ? 10 : 15
+                let list = m.projects.filter { $0.provider == id }.enumerated()
+                    .filter { $0.offset < limit || $0.element.state != .ready }
+                    .map(\.element)
                 let scope = m.scopeName(id)
                 menu.append(.separator())
                 menu.append(.label(ids.count > 1
@@ -88,7 +93,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
                     : "Scope: " + scope))
                 for p in list {
                     let url = p.url
-                    menu.append(.action("\(Self.emoji(p.state))  \(p.displayName) — \(ago(p.created, now: now))") {
+                    // A building deployment says which stage it's stuck in ("needs approval", "queued").
+                    let status = p.state == .building && !p.status.isEmpty ? p.status + " · " : ""
+                    menu.append(.action("\(Self.emoji(p.state))  \(p.displayName) — \(status)\(ago(p.created, now: now))") {
                         if let url { NSWorkspace.shared.open(url) }
                     })
                 }

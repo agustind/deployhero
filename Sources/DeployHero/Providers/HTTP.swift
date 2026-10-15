@@ -14,6 +14,16 @@ struct APIError: LocalizedError, Sendable {
 }
 
 enum HTTP {
+    /// A refresh waits for every request before it schedules the next poll, so
+    /// a request must not hang. `URLSession.shared` only gives up after 60s
+    /// without data (and allows 7 days in total); this caps each request at 30s.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }()
+
     static func request<T: Decodable>(
         _ url: URL,
         auth: String,
@@ -29,7 +39,7 @@ enum HTTP {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONEncoder().encode(body)
         }
-        let (data, res) = try await URLSession.shared.data(for: req)
+        let (data, res) = try await session.data(for: req)
         let status = (res as? HTTPURLResponse)?.statusCode ?? 0
         if (200..<300).contains(status) {
             do {

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1 — 2026-10-15
+
+### Fixed
+- **Auto refresh** could stop until you clicked Refresh. A request that stalled (for example
+  after sleep or a network change) held up the refresh, and the next check wasn't scheduled
+  until it ended. Each request now gives up
+  after 30s, polling keeps running through sleep, and a failed check retries after 10s instead
+  of 60s.
+- **The menu** now lists every building or failed deployment, not only the newest 10 per
+  platform, so it always shows what made the light yellow or red. A building deployment also
+  shows its status, such as "needs approval" or "queued".
+
 ## 0.4.0 — 2026-09-29
 
 ### New

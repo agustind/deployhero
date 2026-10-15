@@ -118,7 +118,9 @@ final class Monitor {
         if signedOut { onSignedOut() }
         if connected.isEmpty { return }
         timer?.cancel()   // an overlapping refresh may have scheduled one
-        let delay = light == .yellow ? Self.pollBusy : Self.pollIdle
+        // A failed check (e.g. right after wake, before the network is back)
+        // retries soon instead of leaving stale state up for a minute.
+        let delay = light == .yellow || !errors.isEmpty ? Self.pollBusy : Self.pollIdle
         timer = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }

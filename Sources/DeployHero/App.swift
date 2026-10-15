@@ -40,12 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
 
+        // The poll timer keeps running through sleep (it fires on wake if it's
+        // overdue), so polling never depends on a wake notification arriving.
         let ws = NSWorkspace.shared.notificationCenter
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [monitor] _ in
             Task { @MainActor in await monitor.refresh() }
-        }
-        ws.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [monitor] _ in
-            Task { @MainActor in monitor.pause() }
         }
 
         if monitor.connected.isEmpty {
