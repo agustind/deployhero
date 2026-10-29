@@ -49,6 +49,8 @@ struct Deployment: Hashable, Sendable {
     var created: Date
     var url: URL?
     var message: String?
+    /// The team, workspace or org it came from ("" without one). Set by Monitor.
+    var scope = ""
 
     /// "<provider>:<key>", what the watch list stores.
     var watchKey: String { provider.rawValue + ":" + key }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 — 2026-10-29
+
+### New
+- **Several teams per platform.** Follow your personal Vercel account and any Vercel teams
+  together, or several Railway workspaces or Fly.io organizations, with one token per platform.
+  Tick them in the settings window; the menu shows a section for each. If one team can't be
+  reached, the others keep showing.
+- To see your personal account and your teams, the Vercel token needs Full Account scope.
+
+### Upgrading
+Your followed team and "Light follows" choices carry over.
+
 ## 0.4.1 — 2026-10-15
 
 ### Fixed

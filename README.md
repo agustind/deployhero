@@ -20,8 +20,9 @@ light.
 - **Choose what the light follows.** Pick all projects, one project, or any mix across
   platforms, either from **Light follows ▸** in the menu or with the checkboxes in the settings
   window.
-- **Scopes.** Pick a Vercel team, a Railway workspace or a Fly.io organization. A Laravel Cloud
-  token already belongs to one organization.
+- **Several teams per platform.** Follow any mix of your personal Vercel account and Vercel
+  teams, Railway workspaces or Fly.io organizations, all with one token per platform. A Laravel
+  Cloud token already belongs to one organization.
 - **Production only.** Optionally ignore preview deployments and non-production environments.
 - **Notifications.** Get a macOS notification when a deployment finishes or fails, including
   quick deploys that start and finish between two checks.
@@ -47,7 +48,7 @@ platform's API. **Disconnect** removes it from the Keychain.
 
 | Platform | Token | Sent to |
 | -------- | ----- | ------- |
-| Vercel | A personal access token from <https://vercel.com/account/tokens>. Scoping it to the team you want to watch is enough. | `api.vercel.com` |
+| Vercel | A personal access token from <https://vercel.com/account/tokens>. Give it Full Account scope to follow your personal account and several teams, or scope it to the one team you want to watch. | `api.vercel.com` |
 | Railway | An **account** token from <https://railway.com/account/tokens>, created with no workspace selected. Workspace and project tokens can't list workspaces. | `backboard.railway.com` |
 | Laravel Cloud | An API token: navigate to your Laravel Cloud organization settings, click on the **API tokens** section in the sidebar, then click the **Create API Token** button. Read access to applications, environments and deployments is enough. | `cloud.laravel.com` |
 | Fly.io | A personal access token (<https://fly.io/user/personal_access_tokens>) or an org token (`fly tokens create org`). | `api.fly.io` |

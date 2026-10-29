@@ -48,7 +48,16 @@ final class Monitor {
 
     var connected: [ProviderID] { ProviderID.allCases.filter { conns[$0] != nil } }
     var errors: [(ProviderID, String)] { connected.compactMap { id in conns[id]?.error.map { (id, $0) } } }
-    func scope(of id: ProviderID) -> String { settings.scopes[id.rawValue] ?? "" }
+    /// The teams, workspaces or orgs a platform follows ([""] for one without them).
+    func scopes(of id: ProviderID) -> [String] {
+        let list = settings.scopes[id.rawValue] ?? []
+        return list.isEmpty ? [""] : list
+    }
+
+    /// Every followed platform and scope, in menu order.
+    var groups: [(id: ProviderID, scope: String)] {
+        connected.flatMap { id in scopes(of: id).map { (id, $0) } }
+    }
 
     // MARK: - Deployments
 
@@ -57,11 +66,9 @@ final class Monitor {
         let account = try await id.provider.account(token: token)
         guard conns[id]?.token == token else { return }   // disconnected meanwhile
         conns[id]?.account = account
-        if account.scopes.isEmpty {
-            settings.scopes[id.rawValue] = ""
-        } else if !account.scopes.contains(where: { $0.id == settings.scopes[id.rawValue] }) {
-            settings.scopes[id.rawValue] = account.defaultScope
-        }
+        // Drop teams the token can no longer see; follow the default when none are left.
+        let kept = (settings.scopes[id.rawValue] ?? []).filter { s in account.scopes.contains { $0.id == s } }
+        settings.scopes[id.rawValue] = account.scopes.isEmpty ? [""] : kept.isEmpty ? [account.defaultScope] : kept
     }
 
     /// Returns true when the token turned out dead and the platform was disconnected.
@@ -69,19 +76,54 @@ final class Monitor {
         guard let token = conns[id]?.token else { return false }
         do {
             if conns[id]?.account == nil { try await loadAccount(id) }
-            let items = try await id.provider.deployments(
-                token: token, scope: scope(of: id), productionOnly: settings.productionOnly)
-            guard conns[id]?.token == token else { return false }
-            conns[id]?.items = items
-            conns[id]?.error = nil
         } catch {
-            guard conns[id]?.token == token else { return false }
-            conns[id]?.items = []
-            conns[id]?.error = error.localizedDescription
-            if (error as? APIError)?.auth == true {
-                disconnect(id)
-                return true
+            if conns[id]?.token == token { conns[id]?.items = [] }
+            return failed(id, token: token, error, message: error.localizedDescription)
+        }
+        // Each followed scope separately, so one failing team doesn't hide the others.
+        let provider = id.provider
+        let productionOnly = settings.productionOnly
+        let results = await withTaskGroup(of: (String, Result<[Deployment], any Error>).self) { group in
+            for scope in scopes(of: id) {
+                group.addTask {
+                    do {
+                        let items = try await provider.deployments(token: token, scope: scope, productionOnly: productionOnly)
+                        return (scope, .success(items.map { var d = $0; d.scope = scope; return d }))
+                    } catch {
+                        return (scope, .failure(error))
+                    }
+                }
             }
+            var out: [String: Result<[Deployment], any Error>] = [:]
+            for await (scope, result) in group { out[scope] = result }
+            return out
+        }
+        guard conns[id]?.token == token else { return false }
+        var items: [Deployment] = []
+        var failure: (scope: String, error: any Error)?
+        for scope in scopes(of: id) {
+            switch results[scope] {
+            case .success(let list)?: items += list
+            case .failure(let error)?: failure = failure ?? (scope, error)
+            case nil: break   // followed meanwhile; the next poll gets it
+            }
+        }
+        conns[id]?.items = items
+        conns[id]?.error = nil
+        guard let failure else { return false }
+        let message = scopes(of: id).count > 1
+            ? scopeName(id, failure.scope) + ": " + failure.error.localizedDescription
+            : failure.error.localizedDescription
+        return failed(id, token: token, failure.error, message: message)
+    }
+
+    /// Records an error; a dead token disconnects the platform (and returns true).
+    private func failed(_ id: ProviderID, token: String, _ error: any Error, message: String) -> Bool {
+        guard conns[id]?.token == token else { return false }
+        conns[id]?.error = message
+        if (error as? APIError)?.auth == true {
+            disconnect(id)
+            return true
         }
         return false
     }
@@ -192,10 +234,24 @@ final class Monitor {
         settings.save()
     }
 
-    func setScope(_ scope: String, for id: ProviderID) async {
-        guard conns[id] != nil, scope != self.scope(of: id) else { return }
-        settings.scopes[id.rawValue] = scope
-        unwatch(id)   // project keys don't carry across scopes
+    /// Follow or stop following one team, workspace or org. The last one stays.
+    func toggleScope(_ scope: String, for id: ProviderID) async {
+        guard conns[id] != nil else { return }
+        var list = scopes(of: id)
+        if let i = list.firstIndex(of: scope) {
+            guard list.count > 1 else { return }
+            list.remove(at: i)
+            let gone = Set(projects.filter { $0.provider == id && $0.scope == scope }.map(\.watchKey))
+            if let watch = settings.watch {
+                let rest = watch.filter { !gone.contains($0) }
+                settings.watch = rest.isEmpty ? nil : rest
+            }
+        } else {
+            list.append(scope)
+        }
+        // Keep the account's order so the menu doesn't reshuffle.
+        let order = conns[id]?.account?.scopes.map(\.id) ?? []
+        settings.scopes[id.rawValue] = list.sorted { (order.firstIndex(of: $0) ?? .max) < (order.firstIndex(of: $1) ?? .max) }
         await settingsChanged()
     }
 
@@ -224,7 +280,7 @@ final class Monitor {
         light = computeLight()
     }
 
-    /// Forget a platform's projects from the watch list (scope change, disconnect).
+    /// Forget a platform's projects from the watch list (disconnect).
     private func unwatch(_ id: ProviderID) {
         guard let watch = settings.watch else { return }
         let rest = watch.filter { !$0.hasPrefix(id.rawValue + ":") }
@@ -257,13 +313,13 @@ final class Monitor {
         return watch.count == 1 ? label(ofKey: watch[0]) : "\(watch.count) projects"
     }
 
-    func scopeName(_ id: ProviderID) -> String {
+    func scopeName(_ id: ProviderID, _ scope: String) -> String {
         let account = conns[id]?.account
-        return account?.scopes.first { $0.id == scope(of: id) }?.name ?? account?.name ?? ""
+        return account?.scopes.first { $0.id == scope }?.name ?? account?.name ?? ""
     }
 
-    func dashboardURL(_ id: ProviderID) -> URL {
-        id.provider.dashboardURL(account: conns[id]?.account, scope: scope(of: id))
+    func dashboardURL(_ id: ProviderID, _ scope: String) -> URL {
+        id.provider.dashboardURL(account: conns[id]?.account, scope: scope)
     }
 }
 

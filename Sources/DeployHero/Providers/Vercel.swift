@@ -9,7 +9,7 @@ struct Vercel: Provider {
     let host = "api.vercel.com"
     let scopeLabel: String? = "Team"
     let tokenURL = URL(string: "https://vercel.com/account/tokens")!
-    let tokenHelp = "Scope it to the team you want to watch."
+    let tokenHelp = "Give it Full Account scope to follow your personal account and several teams, or scope it to one team."
     let dashboard = URL(string: "https://vercel.com")!
 
     private static let states: [String: DeployState?] = [
@@ -100,7 +100,7 @@ struct Vercel: Provider {
                 ?? d.url.flatMap { URL(string: "https://" + $0) }
             out.append(Deployment(
                 provider: id,
-                key: d.name,
+                key: scope + "/" + d.name,   // project names are only unique within a team
                 uid: d.uid,
                 project: d.name,
                 state: state,

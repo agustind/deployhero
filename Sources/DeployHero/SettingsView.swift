@@ -89,11 +89,19 @@ private struct PlatformRow: View {
             }
 
             if let conn, let label = p.scopeLabel, let scopes = conn.account?.scopes, scopes.count >= 2 {
-                Picker(label, selection: Binding(
-                    get: { monitor.scope(of: id) },
-                    set: { s in Task { await monitor.setScope(s, for: id) } })) {
-                    ForEach(scopes, id: \.id) { Text($0.name).tag($0.id) }
+                let followed = monitor.scopes(of: id)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(label + "s to follow").font(.caption).foregroundStyle(.secondary)
+                    ForEach(scopes, id: \.id) { s in
+                        let on = followed.contains(s.id)
+                        Toggle(s.name, isOn: Binding(
+                            get: { on },
+                            set: { _ in Task { await monitor.toggleScope(s.id, for: id) } }))
+                            .toggleStyle(.checkbox)
+                            .disabled(on && followed.count == 1)   // keep at least one
+                    }
                 }
+                .padding(.leading, 34)   // line up under the platform name
             }
 
             if conn == nil && open {

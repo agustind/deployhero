@@ -77,20 +77,21 @@ final class StatusItem: NSObject, NSMenuDelegate {
             for (id, msg) in errs {
                 menu.append(.label("⚠️ \(id.provider.name): \(msg.prefix(60))"))
             }
-            // One platform: a flat list. Several: grouped under headers.
+            // One platform and scope: a flat list. Several: grouped under headers.
             let now = Date()
-            for id in ids {
+            let groups = m.groups
+            for (id, scope) in groups {
                 // The newest few, plus anything building or failed further
                 // down, so the menu always shows what turned the light yellow or red.
-                let limit = ids.count > 1 ? 10 : 15
-                let list = m.projects.filter { $0.provider == id }.enumerated()
+                let limit = groups.count > 1 ? 10 : 15
+                let list = m.projects.filter { $0.provider == id && $0.scope == scope }.enumerated()
                     .filter { $0.offset < limit || $0.element.state != .ready }
                     .map(\.element)
-                let scope = m.scopeName(id)
+                let name = m.scopeName(id, scope)
                 menu.append(.separator())
-                menu.append(.label(ids.count > 1
-                    ? id.provider.name + (scope.isEmpty ? "" : " · " + scope)
-                    : "Scope: " + scope))
+                menu.append(.label(groups.count > 1
+                    ? id.provider.name + (name.isEmpty ? "" : " · " + name)
+                    : "Scope: " + name))
                 for p in list {
                     let url = p.url
                     // A building deployment says which stage it's stuck in ("needs approval", "queued").
@@ -108,14 +109,15 @@ final class StatusItem: NSObject, NSMenuDelegate {
                 menu.append(.separator())
             }
             menu.append(.action("Refresh Now", key: "r") { Task { await m.refresh() } })
-            if ids.count == 1 {
-                let id = ids[0]
-                menu.append(.action("Open \(id.provider.name) Dashboard") { NSWorkspace.shared.open(m.dashboardURL(id)) })
+            if groups.count == 1 {
+                let (id, scope) = groups[0]
+                menu.append(.action("Open \(id.provider.name) Dashboard") { NSWorkspace.shared.open(m.dashboardURL(id, scope)) })
             } else {
                 let dashboards = NSMenuItem(title: "Open Dashboard", action: nil, keyEquivalent: "")
                 dashboards.submenu = NSMenu()
-                for id in ids {
-                    dashboards.submenu?.addItem(.action(id.provider.name) { NSWorkspace.shared.open(m.dashboardURL(id)) })
+                for (id, scope) in groups {
+                    let title = m.scopes(of: id).count > 1 ? id.provider.name + " · " + m.scopeName(id, scope) : id.provider.name
+                    dashboards.submenu?.addItem(.action(title) { NSWorkspace.shared.open(m.dashboardURL(id, scope)) })
                 }
                 menu.append(dashboards)
             }
@@ -129,15 +131,18 @@ final class StatusItem: NSObject, NSMenuDelegate {
 
     private func followsMenu() -> NSMenu {
         let m = monitor
-        let ids = m.connected
+        let groups = m.groups
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.addItem(.action("All projects", checked: m.settings.watch == nil) { m.toggleWatch(nil) })
-        for id in ids {
-            let list = m.projects.filter { $0.provider == id }.prefix(30)
+        for (id, scope) in groups {
+            let list = m.projects.filter { $0.provider == id && $0.scope == scope }.prefix(30)
             if list.isEmpty { continue }
             menu.addItem(.separator())
-            if ids.count > 1 { menu.addItem(.label(id.provider.name)) }
+            if groups.count > 1 {
+                let name = m.scopes(of: id).count > 1 ? m.scopeName(id, scope) : ""
+                menu.addItem(.label(id.provider.name + (name.isEmpty ? "" : " · " + name)))
+            }
             for p in list {
                 let key = p.watchKey
                 menu.addItem(.action(p.displayName, checked: m.settings.watch?.contains(key) ?? false) { m.toggleWatch(key) })
